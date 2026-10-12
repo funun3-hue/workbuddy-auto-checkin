@@ -1,56 +1,77 @@
-# WorkBuddy 自动签到技能
+# WorkBuddy Auto Check-in
 
-通过 OpenCV 图片模板匹配和 Windows 鼠标操作完成 WorkBuddy 每日积分签到。包含完整 `SKILL.md`、Python 脚本与浅色/深色界面模板。
+Automate WorkBuddy's daily points check-in on Windows using OpenCV template matching and mouse input. Includes a ready-to-use AI skill, Python scripts, and image templates for light and dark themes.
 
-## 功能
+## Features
 
-- 自动打开或激活 WorkBuddy，识别签到入口与领取按钮。
-- 点击领取后等待 2 秒，优先匹配浅色弹窗关闭区域，匹配不到再使用深色版本，点击叉号中心。
-- 使用“今日已领取”图片确认签到成功。确认失败或未找到关闭区域时保留主窗口。
-- 已有实例存在活动任务或任务状态不可读时，不重启该实例。
-- 原先未打开的实例在成功后可关闭；原先在后台的实例成功后最小化。
-- 支持每天 09:42 的 Windows 计划任务。
+- Launches or activates WorkBuddy and locates the check-in controls.
+- Waits two seconds after claiming points, then clicks the dialog's close button. Light-theme templates take priority, with dark-theme templates as a fallback.
+- Confirms the claim using the "claimed today" image. Leaves the main window open if the claim cannot be confirmed or the dialog's close button cannot be found.
+- Preserves an existing instance when a task is active or its status cannot be determined.
+- With `--close-after-run`, closes an instance started by the script after a successful check-in. Minimizes an existing instance if it was originally in the background.
+- Can register a daily Windows scheduled task for 09:42, using the computer's local time.
 
-## 安装和运行
+## Requirements
 
-需要 Windows、Python 3.11（含 `py` 启动器）、已安装并登录的 WorkBuddy。默认程序路径为 `%LOCALAPPDATA%\Programs\WorkBuddy\WorkBuddy.exe`。
+- Windows
+- Python 3.11 with the Windows `py` launcher
+- WorkBuddy installed and signed in
+- An unlocked desktop
 
-下载仓库并解压后，在仓库目录执行：
+The default executable path is `%LOCALAPPDATA%\Programs\WorkBuddy\WorkBuddy.exe`.
+
+The bundled image templates were captured from WorkBuddy's Chinese interface. They are theme variants, not English UI templates. Other UI languages, display scaling, or layout changes may require new templates.
+
+## Quick start
+
+Clone this repository or download and extract the ZIP, then run the following command from the project directory:
 
 ```powershell
 py -3.11 .\workbuddy_checkin.py --run --close-after-run --json
 ```
 
-首次执行会创建 `%LOCALAPPDATA%\CheckinRuntime\py311` 虚拟环境，通过 pip 安装 `requirements.txt` 中的固定版本依赖。首次安装需要联网。
+On first run, the script creates a virtual environment at `%LOCALAPPDATA%\CheckinRuntime\py311` and installs the pinned dependencies from `requirements.txt` with pip. Initial setup requires internet access.
 
-安装每日计划任务：
+The script waits for keyboard and mouse activity to stop before starting. Avoid using the mouse or switching windows while it is clicking through the check-in flow.
+
+## Schedule a daily check-in
 
 ```powershell
 py -3.11 .\workbuddy_checkin.py --install-daily-schedule
 ```
 
-任务仅在用户已登录时运行。签到需要桌面解锁；脚本会等待键鼠空闲。请在点击流程期间避免切换窗口。更改时间可编辑 `DAILY_TASK_TIME` 后重新安装任务；移动仓库目录后也应重新安装任务。
+This registers the `WorkBuddy Daily Check-in` task for 09:42. It runs only while you are signed in to Windows, and the desktop must be unlocked for the clicks to work.
 
-仅检查窗口（会打开或激活应用，但不点击签到）：
+To change the time, edit `DAILY_TASK_TIME` in `workbuddy_checkin.py` and run the installation command again. Re-register the task if you move the project folder.
+
+## Check window availability
 
 ```powershell
 py -3.11 .\workbuddy_checkin.py --diagnose
 ```
 
-## 作为 AI 技能使用
+Diagnostic mode opens or activates WorkBuddy and checks for a usable window. It does not click the check-in controls.
 
-将整个仓库文件夹放入你的 AI 工具支持的技能目录，保留 `SKILL.md`、两个 Python 文件、依赖文件和 `assets` 的相对位置。让 AI 按 `SKILL.md` 运行打包脚本。
+## Use as an AI skill
 
-## 工作原理和限制
+Place the complete repository folder in a skill directory supported by your AI tool. Keep `SKILL.md`, both Python scripts, `requirements.txt`, and `assets/` together. The skill instructs the AI tool to run the packaged script.
 
-截图仅在内存中进行模板匹配；坐标由匹配位置和模板内叉号偏移计算。当前不做自动缩放适配，界面缩放、字体或布局改变可能需要重新制作模板。签到弹窗关闭按钮已在本机浅色界面实测；这不代表其他电脑的完整签到流程已经验证。
+## How it works
 
-本项目不读取登录令牌，也不调用签到接口。为保护正在运行的任务，只读查询本机 `~/.workbuddy/workbuddy.db` 中会话的状态字段，不发布或上传数据库。
+The script captures the WorkBuddy window and matches its contents against the bundled templates in memory. Click coordinates are calculated from the matched region; the dialog's close button uses an offset within its header template.
 
-日志位于 `%LOCALAPPDATA%\WorkBuddyAutoCheckin\logs\checkin.log`。公开仓库不包含运行日志、会话数据库、虚拟环境或账号凭据。故障日志包含窗口坐标、进程 ID 和错误信息，分享前请检查内容。
+To avoid interrupting an active task, the script reads session status fields from the local `~/.workbuddy/workbuddy.db` database in read-only mode. It does not read login tokens, call the check-in API, or upload the database.
 
-非官方项目，与 WorkBuddy 官方无隶属关系。
+## Limitations and troubleshooting
 
-## 许可证
+Template matching does not automatically adjust for display scaling, font changes, or a redesigned interface. Update the templates if the controls can no longer be recognized.
 
-项目代码采用 [MIT License](LICENSE)。界面截图模板中的 WorkBuddy 标识及界面元素归各自权利人所有。
+The light-theme dialog close button has been tested on the author's machine. The complete workflow has not been validated across other computers or WorkBuddy versions.
+
+Logs are stored at `%LOCALAPPDATA%\WorkBuddyAutoCheckin\logs\checkin.log`. They may contain window coordinates, process IDs, and error details; review them before sharing. Runtime logs, session databases, virtual environments, and account credentials are excluded from this repository.
+
+This is an unofficial project and is not affiliated with WorkBuddy.
+
+## License
+
+The project code is licensed under the [MIT License](LICENSE). WorkBuddy branding and UI elements shown in the image templates remain the property of their respective owners.
