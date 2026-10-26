@@ -1,9 +1,7 @@
 __pycache__/
 *.py[cod]
-.venv/
-venv/
 *.log
-*.db
-*.sqlite*
-.env
-checkin.lock
+schedule.local.json
+*.pre-lifecycle
+.workbuddy/
+.venv/

@@ -1,77 +1,50 @@
 # WorkBuddy Auto Check-in
 
-Automate WorkBuddy's daily points check-in on Windows using OpenCV template matching and mouse input. Includes a ready-to-use AI skill, Python scripts, and image templates for light and dark themes.
+Windows API-based daily check-in and growth-center reward automation, adapted from [88lin/workbuddy-auto-signin](https://github.com/88lin/workbuddy-auto-signin). This replaces the previous screenshot/mouse workflow.
 
-## Features
+## Behavior
 
-- Launches or activates WorkBuddy and locates the check-in controls.
-- Waits two seconds after claiming points, then clicks the dialog's close button. Light-theme templates take priority, with dark-theme templates as a fallback.
-- Confirms the claim using the "claimed today" image. Leaves the main window open if the claim cannot be confirmed or the dialog's close button cannot be found.
-- Preserves an existing instance when a task is active or its status cannot be determined.
-- With `--close-after-run`, closes an instance started by the script after a successful check-in. Minimizes an existing instance if it was originally in the background.
-- Can register a daily Windows scheduled task for 09:42, using the computer's local time.
+- Runs every day at **09:40 and 18:30**, using the computer's local timezone (set Windows to Asia/Shanghai for Beijing time).
+- Queries today's check-in status first. Already checked in: skip the daily claim and continue with growth-center rewards.
+- Includes travel gifts and Buddy dispatch, task acceptance and completed-task rewards, makeup cards (at most one per run), unlocked streak exchanges, available lottery chances and energy Buddy boxes. These operations may use existing cards, chances and energy. No purchase flow is included; it does not perform user work tasks to satisfy activity requirements.
+- If WorkBuddy is open and all undeleted sessions have known terminal states, force-terminates matching installation processes before restarting and calling the API.
+- If a user task is active or its state cannot be confirmed, calls the API directly while leaving the client running.
+- Restores a pre-existing minimized, normal or maximized window state. If originally closed, closes the temporary instance and clears matching background processes afterward.
+- Uses a mutex and Task Scheduler's IgnoreNew policy to avoid overlapping scheduled runs. Missed runs can catch up when Windows is available; the computer must be awake and signed in.
 
-## Requirements
+## Install
 
-- Windows
-- Python 3.11 with the Windows `py` launcher
-- WorkBuddy installed and signed in
-- An unlocked desktop
+Install Python 3.11+ and sign in to WorkBuddy with your own account. Extract the complete folder to a permanent writable location, then double-click `install.cmd`.
 
-The default executable path is `%LOCALAPPDATA%\Programs\WorkBuddy\WorkBuddy.exe`.
-
-The bundled image templates were captured from WorkBuddy's Chinese interface. They are theme variants, not English UI templates. Other UI languages, display scaling, or layout changes may require new templates.
-
-## Quick start
-
-Clone this repository or download and extract the ZIP, then run the following command from the project directory:
+For a custom interpreter or schedule, run PowerShell in this folder:
 
 ```powershell
-py -3.11 .\workbuddy_checkin.py --run --close-after-run --json
+.\install-windows.ps1 -PythonPath 'C:\path\to\python.exe' -Time @('09:40','18:30')
 ```
 
-On first run, the script creates a virtual environment at `%LOCALAPPDATA%\CheckinRuntime\py311` and installs the pinned dependencies from `requirements.txt` with pip. Initial setup requires internet access.
+The installer performs an offline self-test, registers `WorkBuddy Daily Check-in`, and adds a current-user Startup repair launcher. It does not send a claim during installation. Keep the folder in place; reinstall after moving it. Repair preserves both trigger times from the local config.
 
-The script waits for keyboard and mouse activity to stop before starting. Avoid using the mouse or switching windows while it is clicking through the check-in flow.
-
-## Schedule a daily check-in
+## Commands and logs
 
 ```powershell
-py -3.11 .\workbuddy_checkin.py --install-daily-schedule
+py -3.11 .\run_daily_claim.py --self-test  # offline
+py -3.11 .\signin.py status              # online status only
+py -3.11 .\run_daily_claim.py            # real check-in + growth + lifecycle
+py -3.11 .\run_daily_claim.py --api-only # real check-in + growth without restarting
 ```
 
-This registers the `WorkBuddy Daily Check-in` task for 09:42. It runs only while you are signed in to Windows, and the desktop must be unlocked for the clicks to work.
+`signin.log` contains sanitized API results, including separate daily-check-in and growth-center results. `WorkBuddy.log` records lifecycle decisions; `schedule-repair.log` records repair attempts. A successful daily check-in does not imply all growth operations succeeded. Errors and unconfirmed results require attention.
 
-To change the time, edit `DAILY_TASK_TIME` in `workbuddy_checkin.py` and run the installation command again. Re-register the task if you move the project folder.
+Uninstall by removing the `WorkBuddy Daily Check-in` scheduled task and `WorkBuddy API Check-in Repair.vbs` from the current user's Startup folder.
 
-## Check window availability
+## Scope and verification
 
-```powershell
-py -3.11 .\workbuddy_checkin.py --diagnose
-```
+All lifecycle helpers are bundled: no dependency on the author's AppData scripts or Windows username. WorkBuddy is expected at `%LOCALAPPDATA%\Programs\WorkBuddy\WorkBuddy.exe`. Unknown session schemas/states use the no-restart API path.
 
-Diagnostic mode opens or activates WorkBuddy and checks for a usable window. It does not click the check-in controls.
+Only use your own authorized local login. Do not publish logs, `schedule.local.json`, client databases or credentials. Credentials are processed locally for API authentication and are not bundled. The upstream API and credential formats are reverse-engineered and can change. This is an unofficial project.
 
-## Use as an AI skill
-
-Place the complete repository folder in a skill directory supported by your AI tool. Keep `SKILL.md`, both Python scripts, `requirements.txt`, and `assets/` together. The skill instructs the AI tool to run the packaged script.
-
-## How it works
-
-The script captures the WorkBuddy window and matches its contents against the bundled templates in memory. Click coordinates are calculated from the matched region; the dialog's close button uses an offset within its header template.
-
-To avoid interrupting an active task, the script reads session status fields from the local `~/.workbuddy/workbuddy.db` database in read-only mode. It does not read login tokens, call the check-in API, or upload the database.
-
-## Limitations and troubleshooting
-
-Template matching does not automatically adjust for display scaling, font changes, or a redesigned interface. Update the templates if the controls can no longer be recognized.
-
-The light-theme dialog close button has been tested on the author's machine. The complete workflow has not been validated across other computers or WorkBuddy versions.
-
-Logs are stored at `%LOCALAPPDATA%\WorkBuddyAutoCheckin\logs\checkin.log`. They may contain window coordinates, process IDs, and error details; review them before sharing. Runtime logs, session databases, virtual environments, and account credentials are excluded from this repository.
-
-This is an unofficial project and is not affiliated with WorkBuddy.
+Offline growth/auth/runtime tests and runner routing checks are available in `tests/`. The complete restart/claim workflow has not been validated across other computers or client versions. Installation and offline tests do not prove live rewards were received.
 
 ## License
 
-The project code is licensed under the [MIT License](LICENSE). WorkBuddy branding and UI elements shown in the image templates remain the property of their respective owners.
+Project changes use the [MIT License](LICENSE). `signin.py` and upstream tests derive from 88lin's MIT project; its notice is preserved in [UPSTREAM-LICENSE](UPSTREAM-LICENSE).
