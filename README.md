@@ -1,3 +1,5 @@
+![WorkBuddy 自动签到与成长中心：早晚检查、有任务不打断、恢复窗口状态](hero.png)
+
 <div align="center">
 
 # 🐾 WorkBuddy 自动签到与成长中心领奖
